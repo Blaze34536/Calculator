@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+
+        .calculator {
+            width: 300px;
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .display {
+            width: 100%;
+            height: 50px;
+            background-color: #222;
+            color: white;
+            text-align: right;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .button {
+            height: 60px;
+            font-size: 1.2em;
+            background-color: #f0f0f0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #ddd;
+        }
+
+        .button:active {
+            background-color: #ccc;
+        }
+
+        .button.clear {
+            background-color: #ff6347;
+            color: white;
+        }
+
+        .button.equals {
+            background-color: #4CAF50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <div class="display" id="display"></div>
+        <div class="buttons">
+            <button class="button clear" id="clear">C</button>
+            <button class="button">/</button>
+            <button class="button">*</button>
+            <button class="button">-</button>
+
+            <button class="button">7</button>
+            <button class="button">8</button>
+            <button class="button">9</button>
+            <button class="button">+</button>
+
+            <button class="button">4</button>
+            <button class="button">5</button>
+            <button class="button">6</button>
+            <button class="button">=</button>
+
+            <button class="button">1</button>
+            <button class="button">2</button>
+            <button class="button">3</button>
+            <button class="button">0</button>
+
+            <button class="button">.</button>
+            <button class="button">sin()</button>
+            <button class="button">cos()</button>
+            <button class="button">tan()</button>
+            <button class="button">cot()</button>
+            <button class="button">sec()</button>
+            <button class="button">csc()</button>
+            <button class="button">log()</button>
+            <button class="button">e</button>
+
+        </div>
+    </div>
+
+    <script>
+let display = document.getElementById('display');
+let currentInput = '';
+let fullExpression = '';
+let isResult = false;
+
+document.querySelectorAll('.button').forEach(button => {
+    button.addEventListener('click', function () {
+        let value = this.textContent;
+
+        // Clear
+        if (value === 'C') {
+            currentInput = '';
+            fullExpression = '';
+            display.textContent = '0';
+            return;
+        }
+
+        // Equals
+        if (value === '=') {
+            try {
+                fullExpression += currentInput; // Append the current input
+                fullExpression = autoCloseParentheses(fullExpression);
+                currentInput = evaluateExpression(fullExpression).toString();
+                display.textContent = currentInput;
+                fullExpression = ''; // Reset after result
+                isResult = true;
+            } catch (e) {
+                display.textContent = 'Error';
+            }
+            return;
+        }
+
+        // Operator handling
+        if (['+', '-', '*', '/'].includes(value)) {
+            if (currentInput) {
+                fullExpression += currentInput + value;
+                currentInput = '';
+            } else if (fullExpression && !['+', '-', '*', '/'].includes(fullExpression.slice(-1))) {
+                fullExpression += value;
+            }
+            display.textContent = fullExpression;
+            return;
+        }
+
+        // Special functions
+        if (['sin()', 'cos()', 'tan()', 'cot()', 'sec()', 'csc()', 'log()'].includes(value)) {
+            currentInput += value.replace('()', '('); // Add `(` instead of `()`
+            display.textContent = currentInput;
+            return;
+        }
+
+        // Numbers and decimal point
+        if (value === '.') {
+            if (!currentInput.includes('.')) {
+                currentInput += '.';
+            }
+        } else {
+            if (isResult) {
+                currentInput = value; // Start fresh after result
+                isResult = false;
+            } else {
+                currentInput += value;
+            }
+        }
+        display.textContent = currentInput;
+    });
+});
+function autoCloseParentheses(expression) {
+    let openCount = (expression.match(/\(/g) || []).length;
+    let closeCount = (expression.match(/\)/g) || []).length;
+    return expression + ')'.repeat(openCount - closeCount);
+}
+function evaluateExpression(expression) {
+    try {
+        // Replace trigonometric functions with JS Math equivalents
+        expression = expression.replace(/sin\((.*?)\)/g, (_, p1) => Math.sin(toRadians(eval(p1))));
+        expression = expression.replace(/cos\((.*?)\)/g, (_, p1) => Math.cos(toRadians(eval(p1))));
+        expression = expression.replace(/tan\((.*?)\)/g, (_, p1) => Math.tan(toRadians(eval(p1))));
+        expression = expression.replace(/cot\((.*?)\)/g, (_, p1) => 1 / Math.tan(toRadians(eval(p1))));
+        expression = expression.replace(/sec\((.*?)\)/g, (_, p1) => 1 / Math.cos(toRadians(eval(p1))));
+        expression = expression.replace(/csc\((.*?)\)/g, (_, p1) => 1 / Math.sin(toRadians(eval(p1))));
+        expression = expression.replace(/log\((.*?)\)/g, (_, p1) => Math.log10(eval(p1)));
+        expression = expression.replace(/e/g, Math.E); // Replace 'e' with the constant
+
+        // Evaluate the final expression
+        return eval(expression);
+    } catch (e) {
+        return 'Error';
+    }
+}
+
+// Helper function to convert degrees to radians
+function toRadians(degrees) {
+    return degrees * (Math.PI / 180);
+}
+    </script>
+</body>
+</html>
